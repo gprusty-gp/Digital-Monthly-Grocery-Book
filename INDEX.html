@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Digital Monthly Grocery Book</title>
+  
+  <!-- PWA Meta Tags for Native App Feel (No Browser Chrome, Standalone Mode) -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Grocery Book">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="application-name" content="Grocery Book">
+  
+  <!-- Embedded PWA Manifest (Data URI - zero external dependencies) -->
+  <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Digital%20Monthly%20Grocery%20Book%22%2C%22short_name%22%3A%22Grocery%20Book%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f8fafc%22%2C%22theme_color%22%3A%22%230f766e%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fcdn-icons-png.flaticon.com%2F512%2F3724%2F3724720.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- html2pdf.js for client-side PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, select, textarea {
+      user-select: auto;
+    }
+    .safe-bottom-bar {
+      padding-bottom: calc(1rem + env(safe-area-inset-bottom, 16px));
+    }
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printable-a4-sheet, #printable-a4-sheet * {
+        visibility: visible;
+      }
+      #printable-a4-sheet {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 8mm !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex justify-center items-stretch sm:py-6 sm:px-4">
+
+  <!-- Mobile App Frame Container -->
+  <main class="w-full max-w-lg bg-slate-50 min-h-screen sm:min-h-[880px] sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden relative border-0 sm:border border-slate-300">
+
+    <!-- Top Status / Header Bar -->
+    <header class="bg-teal-700 text-white pt-4 pb-4 px-5 shadow-md relative z-10 shrink-0">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-xl sm:text-2xl font-black tracking-wide flex items-center gap-2">
+            <i class="fa-solid fa-book-open text-amber-300"></i> GROCERY BOOK
+          </h1>
+          <p class="text-xs text-teal-100 font-medium mt-0.5">Digital Monthly Grocery Book</p>
+        </div>
+        <!-- Settings & Library Buttons -->
+        <div class="flex items-center space-x-2">
+          <button onclick="openMasterCatalogModal()" title="Manage Items Catalog" class="w-9 h-9 rounded-xl bg-teal-800/80 hover:bg-teal-600 flex items-center justify-center text-white border border-teal-500/30 transition shadow-sm active:scale-95">
+            <i class="fa-solid fa-boxes-stacked text-sm"></i>
+          </button>
+          <button onclick="openSettingsModal()" title="User Profile Settings" class="w-9 h-9 rounded-xl bg-teal-800/80 hover:bg-teal-600 flex items-center justify-center text-white border border-teal-500/30 transition shadow-sm active:scale-95">
+            <i class="fa-solid fa-gear text-sm"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Scrollable Form Body -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-4 pb-36">
+
+      <!-- Month Selector Card -->
+      <section class="bg-indigo-50 border-2 border-indigo-400 rounded-2xl p-3.5 shadow-sm">
+        <label for="month-select" class="block text-xs font-bold text-indigo-950 uppercase tracking-wider mb-1 flex items-center justify-between">
+          <span><i class="fa-regular fa-calendar-days text-indigo-600 mr-1.5"></i> Select Month</span>
+          <span class="text-[10px] bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full font-bold">MONTHLY LIST</span>
+        </label>
+        <div class="relative">
+          <select id="month-select" onchange="handleMonthChange()" class="w-full bg-white border border-indigo-300 font-extrabold text-indigo-950 text-base rounded-xl py-2.5 px-3 pr-10 shadow-inner appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <!-- Dynamically generated rolling months -->
+          </select>
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-indigo-600 font-black">
+            <i class="fa-solid fa-chevron-down"></i>
+          </div>
+        </div>
+      </section>
+
+      <!-- Grocery Item Input Card -->
+      <section class="bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-3.5 shadow-sm">
+        <div class="flex justify-between items-center mb-1">
+          <label for="item-input" class="text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center">
+            <i class="fa-solid fa-wheat-awn text-emerald-600 mr-1.5"></i> Grocery Item Name
+          </label>
+          <span class="text-[10px] bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 rounded-full">Type or Pick</span>
+        </div>
+        <div class="relative">
+          <input 
+            type="text" 
+            id="item-input" 
+            list="master-items-datalist" 
+            placeholder="Search or type item name..."
+            class="w-full bg-white border border-emerald-300 font-bold text-slate-800 text-sm rounded-xl py-2.5 px-3 pr-9 shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder-slate-400"
+          >
+          <datalist id="master-items-datalist">
+            <!-- Dynamically populated -->
+          </datalist>
+          <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-emerald-600">
+            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+          </div>
+        </div>
+      </section>
+
+      <!-- Multi-Pack Quantity Card -->
+      <section class="bg-purple-50 border-2 border-purple-400 rounded-2xl p-3.5 shadow-sm space-y-2.5">
+        <div class="flex justify-between items-center">
+          <label class="text-xs font-bold text-purple-950 uppercase tracking-wider flex items-center">
+            <i class="fa-solid fa-scale-balanced text-purple-600 mr-1.5"></i> Quantity & Pack Size
+          </label>
+          <button type="button" onclick="toggleQtyMode()" class="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-200/80 px-2 py-0.5 rounded-md transition flex items-center gap-1">
+            <i class="fa-solid fa-sliders text-[10px]"></i> <span id="qty-mode-btn-text">Free Text Mode</span>
+          </button>
+        </div>
+
+        <!-- Smart Stepper Pack Mode -->
+        <div id="smart-qty-section" class="space-y-2">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <span class="text-[10px] font-bold text-purple-900 block mb-0.5">Pack Size / Weight</span>
+              <input 
+                type="text" 
+                id="pack-size-input" 
+                value="1 kg" 
+                placeholder="e.g. 250g, 1 kg"
+                oninput="updateSmartQtySummary()" 
+                class="w-full bg-white border border-purple-300 font-bold text-purple-950 text-sm rounded-xl py-2 px-2.5 text-center shadow-inner focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+            </div>
+            <div>
+              <span class="text-[10px] font-bold text-purple-900 block mb-0.5">Packets Count</span>
+              <div class="flex items-center bg-white border border-purple-300 rounded-xl overflow-hidden shadow-inner">
+                <button type="button" onclick="changePacketCount(-1)" class="w-10 py-2 bg-purple-100 hover:bg-purple-200 text-purple-800 font-black text-sm active:bg-purple-300">-</button>
+                <span id="packet-count-display" class="flex-1 text-center font-black text-purple-950 text-sm">2</span>
+                <button type="button" onclick="changePacketCount(1)" class="w-10 py-2 bg-purple-100 hover:bg-purple-200 text-purple-800 font-black text-sm active:bg-purple-300">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white border border-purple-200 rounded-xl py-1.5 px-3 flex justify-between items-center text-xs">
+            <span class="text-purple-700 font-medium">Resulting Format:</span>
+            <span id="smart-qty-summary" class="font-black text-purple-900 bg-purple-100 px-2.5 py-0.5 rounded-lg border border-purple-300">1 kg x 2</span>
+          </div>
+
+          <div class="pt-1">
+            <span class="text-[10px] font-bold text-purple-800 block mb-1">Quick Multipacks:</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" onclick="setQuickMultiPack('100g', 2)" class="text-[11px] bg-white hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold px-2 py-1 rounded-lg transition active:scale-95">100g x 2</button>
+              <button type="button" onclick="setQuickMultiPack('100g', 3)" class="text-[11px] bg-white hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold px-2 py-1 rounded-lg transition active:scale-95">100g x 3</button>
+              <button type="button" onclick="setQuickMultiPack('250g', 2)" class="text-[11px] bg-white hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold px-2 py-1 rounded-lg transition active:scale-95">250g x 2</button>
+              <button type="button" onclick="setQuickMultiPack('500ml', 2)" class="text-[11px] bg-white hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold px-2 py-1 rounded-lg transition active:scale-95">500ml x 2</button>
+              <button type="button" onclick="setQuickMultiPack('1 kg', 4)" class="text-[11px] bg-white hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold px-2 py-1 rounded-lg transition active:scale-95">1 kg x 4</button>
+              <button type="button" onclick="setQuickMultiPack('5 kg', 3)" class="text-[11px] bg-white hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold px-2 py-1 rounded-lg transition active:scale-95">5 kg x 3</button>
+              <button type="button" onclick="setQuickMultiPack('1 pkt', 1)" class="text-[11px] bg-white hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold px-2 py-1 rounded-lg transition active:scale-95">1 pkt</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Free Text Mode -->
+        <div id="free-text-qty-section" class="hidden">
+          <input 
+            type="text" 
+            id="qty-input" 
+            placeholder="Type any quantity (e.g. 7 kg, 3 pkt, 6 pcs)..."
+            class="w-full bg-white border border-purple-300 font-bold text-slate-800 text-sm rounded-xl py-2.5 px-3 shadow-inner focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+        </div>
+      </section>
+
+      <!-- Action Button: Add Item -->
+      <button 
+        type="button" 
+        onclick="addItemToList()" 
+        class="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-extrabold text-sm py-3.5 px-4 rounded-2xl shadow-lg hover:shadow-orange-500/30 transition transform active:scale-98 flex items-center justify-center space-x-2 tracking-wide"
+      >
+        <i class="fa-solid fa-circle-plus text-base"></i>
+        <span id="add-item-btn-text">ADD TO GROCERY LIST</span>
+      </button>
+
+      <!-- List Header & Actions -->
+      <div class="pt-2 flex justify-between items-center border-t border-slate-200">
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-black text-slate-800 uppercase tracking-wider">
+            <i class="fa-solid fa-clipboard-list text-teal-700 mr-1"></i> List Items
+          </span>
+          <span id="items-badge-count" class="bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-extrabold px-2 py-0.5 rounded-full">0</span>
+        </div>
+        <button 
+          type="button" 
+          onclick="promptClearAllModal()" 
+          class="text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-xl transition flex items-center gap-1 active:scale-95"
+        >
+          <i class="fa-regular fa-trash-can"></i> Clear All
+        </button>
+      </div>
+
+      <!-- Items Container -->
+      <div id="items-container" class="space-y-2">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Empty State Card -->
+      <div id="empty-state-card" class="hidden text-center py-8 px-4 bg-white border-2 border-dashed border-slate-200 rounded-2xl">
+        <div class="w-12 h-12 mx-auto rounded-full bg-amber-50 text-amber-500 flex items-center justify-center text-xl mb-2">
+          <i class="fa-solid fa-basket-shopping"></i>
+        </div>
+        <h4 class="text-xs font-bold text-slate-700">No items added yet</h4>
+        <p class="text-[11px] text-slate-400 mt-0.5">Select items from above and tap Add</p>
+      </div>
+
+    </div>
+
+    <!-- Bottom Fixed Actions Bar -->
+    <footer class="bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 pt-3 safe-bottom-bar flex items-center gap-2.5 shadow-[0_-8px_20px_rgba(0,0,0,0.08)] sticky bottom-0 left-0 right-0 z-30">
+      <button 
+        type="button" 
+        onclick="saveDraftManually()" 
+        class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold text-xs py-3.5 px-2 rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
+      >
+        <i class="fa-regular fa-floppy-disk text-slate-600"></i>
+        <span>SAVE DRAFT</span>
+      </button>
+
+      <button 
+        type="button" 
+        onclick="openPdfViewerModal()" 
+        class="flex-[1.5] bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-3.5 px-3 rounded-xl transition flex items-center justify-center gap-2 shadow-md hover:shadow-emerald-600/30 active:scale-95"
+      >
+        <i class="fa-solid fa-file-pdf text-sm"></i>
+        <span>GENERATE FINAL PDF</span>
+      </button>
+    </footer>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: Final Printable PDF Document Preview                    -->
+  <!-- ============================================================== -->
+  <div id="pdf-viewer-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden overflow-y-auto">
+    <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden border border-slate-300">
+      
+      <!-- Modal Header Bar -->
+      <div class="bg-slate-900 text-white py-3 px-4 flex justify-between items-center shrink-0">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-file-lines text-teal-400"></i>
+          <span class="font-bold text-sm tracking-wide">Document Preview</span>
+          <span id="pdf-modal-item-count" class="text-xs bg-slate-800 text-teal-300 px-2 py-0.5 rounded-full border border-slate-700"></span>
+        </div>
+        <button onclick="closePdfViewerModal()" class="w-8 h-8 rounded-lg hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Scrollable Document Area -->
+      <div class="p-3 sm:p-6 overflow-y-auto bg-slate-100 flex-1 flex justify-center">
+        
+        <!-- The Printable Document Frame -->
+        <div id="printable-a4-sheet" class="bg-white w-full max-w-[210mm] p-6 sm:p-10 border border-slate-300 rounded shadow-md text-black font-sans leading-normal">
+          
+          <!-- Exact Document Header from original format -->
+          <div class="text-center mb-6">
+            <h1 class="text-xl sm:text-2xl font-black tracking-wide uppercase border-b-2 border-black pb-2 inline-block">
+              MONTHLY GROCERY LIST — <span id="doc-month-title">OCTOBER 2026</span>
+            </h1>
+          </div>
+
+          <!-- Customer Contact Bar -->
+          <div class="flex justify-between items-center text-xs sm:text-sm font-bold border-b border-black pb-2 mb-4 px-1 text-black">
+            <div>
+              <span class="text-slate-700">Name:</span> <span id="doc-user-name" class="font-extrabold text-black">P. C. Prusty</span>
+            </div>
+            <div>
+              <span class="text-slate-700">Contact:</span> <span id="doc-user-phone" class="font-extrabold text-black">7008715160</span>
+            </div>
+          </div>
+
+          <!-- Document Table: 5 Columns -->
+          <table class="w-full border-collapse border border-black text-xs sm:text-sm my-2">
+            <thead>
+              <tr class="bg-slate-200 border-b border-black font-extrabold text-black">
+                <th class="border border-black py-2 px-2 w-14 text-center font-bold">Sl. No.</th>
+                <th class="border border-black py-2 px-3 text-left font-bold">Product Name</th>
+                <th class="border border-black py-2 px-3 w-32 text-center font-bold">Quantity</th>
+                <th class="border border-black py-2 px-3 w-24 text-center font-bold">Price</th>
+                <th class="border border-black py-2 px-3 w-28 text-center font-bold">Final Price</th>
+              </tr>
+            </thead>
+            <tbody id="doc-table-body">
+              <!-- Dynamically populated rows -->
+            </tbody>
+            <!-- Blank Hand-Written Rows + Grand Total -->
+            <tfoot id="doc-table-tfoot">
+              <tr class="border-b border-black h-8">
+                <td class="border border-black py-2 px-2 text-center font-medium text-slate-400" id="blank-row-1-sl"></td>
+                <td class="border border-black py-2 px-3"></td>
+                <td class="border border-black py-2 px-3"></td>
+                <td class="border border-black py-2 px-3"></td>
+                <td class="border border-black py-2 px-3"></td>
+              </tr>
+              <tr class="border-b border-black h-8">
+                <td class="border border-black py-2 px-2 text-center font-medium text-slate-400" id="blank-row-2-sl"></td>
+                <td class="border border-black py-2 px-3"></td>
+                <td class="border border-black py-2 px-3"></td>
+                <td class="border border-black py-2 px-3"></td>
+                <td class="border border-black py-2 px-3"></td>
+              </tr>
+              <tr class="border-b border-black h-8">
+                <td class="border border-black py-2 px-2 text-center font-medium text-slate-400" id="blank-row-3-sl"></td>
+                <td class="border border-black py-2 px-3"></td>
+                <td class="border border-black py-2 px-3"></td>
+                <td class="border border-black py-2 px-3"></td>
+                <td class="border border-black py-2 px-3"></td>
+              </tr>
+              <!-- Grand Total Row -->
+              <tr class="bg-slate-100 font-extrabold text-black border-t-2 border-black">
+                <td colspan="4" class="border border-black py-2.5 px-4 text-right tracking-wider uppercase text-xs sm:text-sm font-black">
+                  GRAND TOTAL :
+                </td>
+                <td class="border border-black py-2.5 px-3 text-center text-sm font-black bg-white">
+                  <span class="text-slate-400 text-xs font-normal mr-1">₹</span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <!-- Footer Signature Area -->
+          <div class="mt-10 pt-6 border-t border-slate-300 flex justify-between items-end text-xs text-black">
+            <div class="text-left space-y-4">
+              <span class="text-[11px] text-slate-600 block">* All items & quantities verified before billing.</span>
+              <div class="border-t border-dashed border-black pt-1 w-44 text-center font-semibold text-black">
+                Customer Signature
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="border-t border-dashed border-black pt-1 w-48 text-center font-semibold text-black">
+                Shopkeeper Signature / Stamp
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-slate-100 border-t border-slate-300 p-3 flex flex-wrap justify-end gap-2 shrink-0">
+        <button onclick="closePdfViewerModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-bold text-xs text-slate-700 rounded-xl transition">
+          Close
+        </button>
+        <button onclick="printPdfSheet()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 font-bold text-xs text-white rounded-xl transition flex items-center gap-1.5 shadow-sm">
+          <i class="fa-solid fa-print"></i> Print
+        </button>
+        <button id="download-pdf-btn" onclick="downloadPdfFileDirectly()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 font-extrabold text-xs text-white rounded-xl transition flex items-center gap-2 shadow-md">
+          <i class="fa-solid fa-download"></i> <span>DOWNLOAD PDF FILE</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: Confirmation for Clear All                              -->
+  <!-- ============================================================== -->
+  <div id="clear-confirm-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl border border-slate-200 text-center space-y-4">
+      <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-xl">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-black text-slate-900">Clear Grocery List?</h3>
+        <p class="text-xs text-slate-500 mt-1">This will delete all items for <span id="clear-modal-month-name" class="font-bold text-slate-700"></span>.</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="closeClearAllModal()" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">
+          Cancel
+        </button>
+        <button onclick="confirmClearAllAction()" class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow transition">
+          Yes, Clear All
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: Master Catalog Manager                                  -->
+  <!-- ============================================================== -->
+  <div id="master-catalog-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden border border-slate-300">
+      <div class="bg-teal-700 text-white p-4 flex justify-between items-center">
+        <h3 class="font-extrabold text-sm flex items-center gap-2">
+          <i class="fa-solid fa-boxes-stacked text-amber-300"></i> Master Items Library
+        </h3>
+        <button onclick="closeMasterCatalogModal()" class="w-7 h-7 rounded-lg hover:bg-teal-800 text-teal-200 hover:text-white flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="p-4 flex-1 overflow-y-auto space-y-3">
+        <div class="flex gap-2">
+          <input type="text" id="new-master-item-input" placeholder="Add new grocery item name..." class="flex-1 border border-slate-300 text-xs font-semibold rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500">
+          <button onclick="addMasterItemManual()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition">
+            Add
+          </button>
+        </div>
+        <div id="master-items-list" class="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+      <div class="bg-slate-50 p-3 border-t border-slate-200 flex justify-between items-center">
+        <button onclick="resetMasterCatalogToDefaults()" class="text-xs font-semibold text-rose-600 hover:underline">
+          Reset to default 47 items
+        </button>
+        <button onclick="closeMasterCatalogModal()" class="bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: User Settings (Name & Phone)                            -->
+  <!-- ============================================================== -->
+  <div id="settings-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-5 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-user-gear text-teal-600"></i> Customer Profile
+        </h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Customer Name:</label>
+          <input type="text" id="settings-user-name" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Contact Phone:</label>
+          <input type="text" id="settings-user-phone" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeSettingsModal()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl">
+          Cancel
+        </button>
+        <button onclick="saveUserProfile()" class="flex-1 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl">
+          Save Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-wrapper" class="fixed bottom-24 left-0 right-0 flex justify-center pointer-events-none z-50"></div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    const STORAGE_KEY = 'grocery_book_app_v8';
+    const MASTER_ITEMS_KEY = 'grocery_book_master_items_v8';
+    const LAST_MONTH_KEY = 'grocery_book_last_selected_month_v8';
+
+    let isFreeTextMode = false;
+    let packetCount = 2;
+    let editingItemId = null;
+
+    // Full 47 Authentic Items
+    const DEFAULT_MASTER_ITEMS = [
+      "Amul Spray", "Chini", "Aata", "Harada Dali", "Buta Dali", "Luna",
+      "Maggi (Bada Packet)", "EFP (Bada Packet)", "Muga Dali", "Nadia Tela (Coconut Oil)",
+      "Tata Tea Premium (Red)", "Nature Fresh Refined Oil", "Medimix Soap (Bada Packet)",
+      "EXO Sabun (Bartan Safa)", "Surf Excel", "Jira Gunda", "Lanka Gunda", "Dhania Gunda",
+      "Haladi Gunda", "Ruchi Chicken Masala", "Buli Buta", "Masur Dali", "Chura",
+      "Biri Dali", "Matar", "Colgate Paste", "Sorisa", "Gota Jira", "Gota Sukha Lanka",
+      "Gota Dhania", "Golamaricha", "Mota Arua Chawal", "Balami Arua Chawal",
+      "Teja Patra (Green)", "Gujarati", "Kismis", "Lifebuoy Sabun (Chota Packet)",
+      "Rin Sabun (Chota Packet)", "Toothbrush (Medium)", "Charcoal Toothbrush (Medium)",
+      "Kissan Tomato Sauce", "Suji", "Besan", "Shriram Papad (Sada)",
+      "Sorisa Tela (Mustard Oil)", "Basana Maja Scrub (Scrub Pad)", "Hangu (Chota Packet)"
+    ];
+
+    // Initial 4 starter items
+    const DEFAULT_START_LIST = [
+      { id: '1', name: 'Amul Spray', qty: '1 kg x 4' },
+      { id: '2', name: 'Chini', qty: '7 kg' },
+      { id: '3', name: 'Aata', qty: '5 kg x 3' },
+      { id: '4', name: 'Tata Tea Premium (Red)', qty: '250g x 2' }
+    ];
+
+    let masterItems = [];
+
+    let state = {
+      selectedMonth: "October 2026",
+      userInfo: {
+        name: "P. C. Prusty",
+        phone: "7008715160"
+      },
+      lists: {}
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadMasterItems();
+      loadState();
+
+      let savedLastMonth = null;
+      try {
+        savedLastMonth = localStorage.getItem(LAST_MONTH_KEY);
+      } catch (e) {}
+
+      if (savedLastMonth) {
+        state.selectedMonth = savedLastMonth;
+      } else if (!state.selectedMonth) {
+        state.selectedMonth = "October 2026";
+      }
+
+      if (!state.lists[state.selectedMonth] || state.lists[state.selectedMonth].length === 0) {
+        state.lists[state.selectedMonth] = [...DEFAULT_START_LIST];
+      }
+
+      buildMonthDropdownOptions();
+
+      const nameInput = document.getElementById('settings-user-name');
+      const phoneInput = document.getElementById('settings-user-phone');
+      if (nameInput) nameInput.value = state.userInfo.name || 'P. C. Prusty';
+      if (phoneInput) phoneInput.value = state.userInfo.phone || '7008715160';
+
+      const monthSelect = document.getElementById('month-select');
+      if (monthSelect) monthSelect.value = state.selectedMonth;
+
+      refreshMasterItemsDatalist();
+      renderCurrentList();
+      updateSmartQtySummary();
+    });
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            state = { ...state, ...parsed };
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load stored state:', err);
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (state.selectedMonth) {
+          localStorage.setItem(LAST_MONTH_KEY, state.selectedMonth);
+        }
+      } catch (err) {
+        console.warn('Storage write error:', err);
+      }
+    }
+
+    function loadMasterItems() {
+      try {
+        const raw = localStorage.getItem(MASTER_ITEMS_KEY);
+        if (raw) {
+          masterItems = JSON.parse(raw);
+        } else {
+          masterItems = [...DEFAULT_MASTER_ITEMS];
+        }
+      } catch (e) {
+        masterItems = [...DEFAULT_MASTER_ITEMS];
+      }
+    }
+
+    function saveMasterItems() {
+      try {
+        localStorage.setItem(MASTER_ITEMS_KEY, JSON.stringify(masterItems));
+        refreshMasterItemsDatalist();
+      } catch (e) {}
+    }
+
+    function buildMonthDropdownOptions() {
+      const select = document.getElementById('month-select');
+      if (!select) return;
+
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June", 
+        "July", "August", "September", "October", "November", "December"
+      ];
+
+      const now = new Date();
+      const currYear = now.getFullYear();
+      const currMonth = now.getMonth();
+
+      let optionsHtml = '';
+      for (let offset = -3; offset <= 18; offset++) {
+        const targetDate = new Date(currYear, currMonth + offset, 1);
+        const y = targetDate.getFullYear();
+        const m = monthNames[targetDate.getMonth()];
+        const val = `${m} ${y}`;
+        const isSelected = val === state.selectedMonth ? 'selected' : '';
+        const tag = (offset === 0) ? ' (Current)' : '';
+        optionsHtml += `<option value="${val}" ${isSelected}>${val}${tag}</option>`;
+      }
+
+      if (!optionsHtml.includes(`value="${state.selectedMonth}"`)) {
+        optionsHtml = `<option value="${state.selectedMonth}" selected>${state.selectedMonth}</option>` + optionsHtml;
+      }
+
+      select.innerHTML = optionsHtml;
+      select.value = state.selectedMonth;
+    }
+
+    function handleMonthChange() {
+      const monthSelect = document.getElementById('month-select');
+      const selected = monthSelect ? monthSelect.value : state.selectedMonth;
+      state.selectedMonth = selected;
+      if (!state.lists[selected]) {
+        state.lists[selected] = [];
+      }
+      try {
+        localStorage.setItem(LAST_MONTH_KEY, selected);
+      } catch (e) {}
+      saveState();
+      renderCurrentList();
+      showToast(`Switched to ${selected}`);
+    }
+
+    function toggleQtyMode() {
+      isFreeTextMode = !isFreeTextMode;
+      const smartSection = document.getElementById('smart-qty-section');
+      const freeSection = document.getElementById('free-text-qty-section');
+      const btnText = document.getElementById('qty-mode-btn-text');
+
+      if (isFreeTextMode) {
+        smartSection.classList.add('hidden');
+        freeSection.classList.remove('hidden');
+        btnText.innerText = 'Packets Mode';
+        const summary = document.getElementById('smart-qty-summary').innerText;
+        document.getElementById('qty-input').value = summary;
+        document.getElementById('qty-input').focus();
+      } else {
+        smartSection.classList.remove('hidden');
+        freeSection.classList.add('hidden');
+        btnText.innerText = 'Free Text Mode';
+        updateSmartQtySummary();
+      }
+    }
+
+    function changePacketCount(delta) {
+      packetCount += delta;
+      if (packetCount < 1) packetCount = 1;
+      if (packetCount > 99) packetCount = 99;
+      document.getElementById('packet-count-display').innerText = packetCount;
+      updateSmartQtySummary();
+    }
+
+    function setQuickMultiPack(packSize, count) {
+      if (isFreeTextMode) {
+        toggleQtyMode();
+      }
+      document.getElementById('pack-size-input').value = packSize;
+      packetCount = count;
+      document.getElementById('packet-count-display').innerText = packetCount;
+      updateSmartQtySummary();
+    }
+
+    function updateSmartQtySummary() {
+      const packInput = document.getElementById('pack-size-input');
+      const summaryEl = document.getElementById('smart-qty-summary');
+      if (!packInput || !summaryEl) return '';
+
+      const rawPack = packInput.value.trim() || '1 kg';
+      const count = packetCount;
+
+      let finalSummary = '';
+      if (count === 1) {
+        finalSummary = `${rawPack}`;
+      } else {
+        finalSummary = `${rawPack} x ${count}`;
+      }
+
+      summaryEl.innerText = finalSummary;
+      return finalSummary;
+    }
+
+    function getSelectedQuantityString() {
+      if (isFreeTextMode) {
+        const freeInput = document.getElementById('qty-input').value.trim();
+        return freeInput || updateSmartQtySummary();
+      } else {
+        return updateSmartQtySummary();
+      }
+    }
+
+    function addItemToList() {
+      const itemInput = document.getElementById('item-input');
+      const itemName = itemInput.value.trim();
+      const itemQty = getSelectedQuantityString();
+
+      if (!itemName) {
+        showToast('Please type or select an item name.');
+        itemInput.focus();
+        return;
+      }
+
+      if (!itemQty) {
+        showToast('Please specify quantity or pack size.');
+        return;
+      }
+
+      const currentMonth = state.selectedMonth;
+      if (!state.lists[currentMonth]) {
+        state.lists[currentMonth] = [];
+      }
+
+      if (editingItemId) {
+        const idx = state.lists[currentMonth].findIndex(i => i.id === editingItemId);
+        if (idx !== -1) {
+          state.lists[currentMonth][idx].name = itemName;
+          state.lists[currentMonth][idx].qty = itemQty;
+          showToast(`Updated "${itemName}"`);
+        }
+        editingItemId = null;
+        document.getElementById('add-item-btn-text').innerText = 'ADD TO GROCERY LIST';
+      } else {
+        const newItem = {
+          id: Date.now().toString(),
+          name: itemName,
+          qty: itemQty
+        };
+        state.lists[currentMonth].push(newItem);
+        showToast(`Added: ${itemName} (${itemQty})`);
+      }
+
+      if (!masterItems.some(i => i.toLowerCase() === itemName.toLowerCase())) {
+        masterItems.push(itemName);
+        saveMasterItems();
+      }
+
+      saveState();
+      renderCurrentList();
+      resetFormInputs();
+    }
+
+    function editItem(itemId) {
+      const currentMonth = state.selectedMonth;
+      const item = (state.lists[currentMonth] || []).find(i => i.id === itemId);
+      if (!item) return;
+
+      editingItemId = itemId;
+      document.getElementById('item-input').value = item.name;
+
+      const match = item.qty.match(/^(.*?)\s*x\s*(\d+)/i);
+      if (match) {
+        if (isFreeTextMode) toggleQtyMode();
+        document.getElementById('pack-size-input').value = match[1].trim();
+        packetCount = parseInt(match[2], 10) || 1;
+        document.getElementById('packet-count-display').innerText = packetCount;
+        updateSmartQtySummary();
+      } else {
+        if (!isFreeTextMode) toggleQtyMode();
+        document.getElementById('qty-input').value = item.qty;
+      }
+
+      document.getElementById('add-item-btn-text').innerText = 'UPDATE ITEM';
+      document.getElementById('item-input').focus();
+      showToast(`Editing "${item.name}"`);
+    }
+
+    function deleteItem(itemId) {
+      const currentMonth = state.selectedMonth;
+      if (state.lists[currentMonth]) {
+        state.lists[currentMonth] = state.lists[currentMonth].filter(item => item.id !== itemId);
+        if (editingItemId === itemId) {
+          resetFormInputs();
+        }
+        saveState();
+        renderCurrentList();
+        showToast('Item deleted.');
+      }
+    }
+
+    function resetFormInputs() {
+      editingItemId = null;
+      document.getElementById('add-item-btn-text').innerText = 'ADD TO GROCERY LIST';
+      document.getElementById('item-input').value = '';
+      if (isFreeTextMode) {
+        document.getElementById('qty-input').value = '';
+      }
+      document.getElementById('item-input').focus();
+    }
+
+    function promptClearAllModal() {
+      const currentMonth = state.selectedMonth;
+      const items = state.lists[currentMonth] || [];
+      if (items.length === 0) {
+        showToast('List is already empty!');
+        return;
+      }
+      document.getElementById('clear-modal-month-name').innerText = currentMonth;
+      document.getElementById('clear-confirm-modal').classList.remove('hidden');
+    }
+
+    function closeClearAllModal() {
+      document.getElementById('clear-confirm-modal').classList.add('hidden');
+    }
+
+    function confirmClearAllAction() {
+      const currentMonth = state.selectedMonth;
+      state.lists[currentMonth] = [];
+      resetFormInputs();
+      saveState();
+      renderCurrentList();
+      closeClearAllModal();
+      showToast(`All items cleared for ${currentMonth}`);
+    }
+
+    function renderCurrentList() {
+      const currentMonth = state.selectedMonth;
+      const items = state.lists[currentMonth] || [];
+
+      document.getElementById('items-badge-count').innerText = items.length;
+      const container = document.getElementById('items-container');
+      const emptyState = document.getElementById('empty-state-card');
+
+      if (items.length === 0) {
+        emptyState.classList.remove('hidden');
+        container.innerHTML = '';
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      container.innerHTML = items.map((item, index) => {
+        return `
+          <div class="bg-white border border-slate-200 hover:border-teal-400 rounded-2xl p-3 flex items-center justify-between shadow-sm transition">
+            <div class="flex items-center space-x-3 flex-1 min-w-0 pr-2">
+              <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs flex items-center justify-center shrink-0">
+                ${index + 1}
+              </div>
+              <div class="flex-1 min-w-0">
+                <h4 class="text-xs font-bold text-slate-900 truncate uppercase">${escapeHtml(item.name)}</h4>
+                <div class="mt-0.5">
+                  <span class="inline-block bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                    ${escapeHtml(item.qty)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center space-x-1.5 shrink-0">
+              <button onclick="editItem('${item.id}')" title="Edit Item" class="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 hover:bg-teal-100 flex items-center justify-center transition active:scale-95">
+                <i class="fa-solid fa-pencil text-xs"></i>
+              </button>
+              <button onclick="deleteItem('${item.id}')" title="Delete Item" class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition active:scale-95">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function saveDraftManually() {
+      const currentMonth = state.selectedMonth;
+      try {
+        localStorage.setItem(LAST_MONTH_KEY, currentMonth);
+      } catch (e) {}
+      saveState();
+      const count = (state.lists[currentMonth] || []).length;
+      showToast(`Draft saved: ${count} item(s) for ${currentMonth}`);
+    }
+
+    function openPdfViewerModal() {
+      const currentMonth = state.selectedMonth;
+      const items = state.lists[currentMonth] || [];
+
+      if (items.length === 0) {
+        showToast('Please add at least one item before generating the PDF.');
+        return;
+      }
+
+      document.getElementById('doc-month-title').innerText = currentMonth.toUpperCase();
+      document.getElementById('doc-user-name').innerText = state.userInfo.name || 'P. C. Prusty';
+      document.getElementById('doc-user-phone').innerText = state.userInfo.phone || '7008715160';
+
+      const tbody = document.getElementById('doc-table-body');
+      tbody.innerHTML = items.map((item, index) => {
+        return `
+          <tr class="border-b border-black">
+            <td class="border border-black py-1.5 px-2 text-center font-medium">${index + 1}</td>
+            <td class="border border-black py-1.5 px-3 text-left font-medium">${escapeHtml(item.name)}</td>
+            <td class="border border-black py-1.5 px-3 text-center font-medium">${escapeHtml(item.qty)}</td>
+            <td class="border border-black py-1.5 px-3 text-center"></td>
+            <td class="border border-black py-1.5 px-3 text-center"></td>
+          </tr>
+        `;
+      }).join('');
+
+      const nextNum = items.length + 1;
+      document.getElementById('blank-row-1-sl').innerText = nextNum;
+      document.getElementById('blank-row-2-sl').innerText = nextNum + 1;
+      document.getElementById('blank-row-3-sl').innerText = nextNum + 2;
+
+      document.getElementById('pdf-modal-item-count').innerText = `${items.length} Item(s)`;
+      document.getElementById('pdf-viewer-modal').classList.remove('hidden');
+    }
+
+    function closePdfViewerModal() {
+      document.getElementById('pdf-viewer-modal').classList.add('hidden');
+    }
+
+    function printPdfSheet() {
+      window.print();
+    }
+
+    function downloadPdfFileDirectly() {
+      const element = document.getElementById('printable-a4-sheet');
+      const btn = document.getElementById('download-pdf-btn');
+
+      if (!element) return;
+
+      const currentMonth = state.selectedMonth.replace(/\s+/g, '_');
+      const filename = `MONTHLY_GROCERY_LIST_${currentMonth}.pdf`;
+
+      btn.disabled = true;
+      const origHtml = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>GENERATING PDF...</span>`;
+
+      const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      try {
+        if (typeof html2pdf !== 'undefined') {
+          html2pdf().set(opt).from(element).save().then(() => {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+            showToast(`Downloaded: ${filename}`);
+          }).catch(err => {
+            console.error('html2pdf generation error:', err);
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+            printPdfSheet();
+          });
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = origHtml;
+          printPdfSheet();
+        }
+      } catch (e) {
+        console.error(e);
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+        printPdfSheet();
+      }
+    }
+
+    function refreshMasterItemsDatalist() {
+      const dl = document.getElementById('master-items-datalist');
+      if (dl) {
+        dl.innerHTML = masterItems.map(item => `<option value="${escapeHtml(item)}"></option>`).join('');
+      }
+    }
+
+    function openMasterCatalogModal() {
+      renderMasterCatalogList();
+      document.getElementById('master-catalog-modal').classList.remove('hidden');
+    }
+
+    function closeMasterCatalogModal() {
+      document.getElementById('master-catalog-modal').classList.add('hidden');
+    }
+
+    function renderMasterCatalogList() {
+      const container = document.getElementById('master-items-list');
+      if (!container) return;
+
+      container.innerHTML = masterItems.map((item, index) => {
+        return `
+          <div class="flex justify-between items-center bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-medium">
+            <span class="truncate text-slate-800">${escapeHtml(item)}</span>
+            <button onclick="removeMasterItem(${index})" class="text-rose-500 hover:text-rose-700 ml-2">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function addMasterItemManual() {
+      const input = document.getElementById('new-master-item-input');
+      const val = input.value.trim();
+      if (!val) return;
+
+      if (!masterItems.includes(val)) {
+        masterItems.push(val);
+        saveMasterItems();
+        renderMasterCatalogList();
+        input.value = '';
+        showToast(`Added to library: ${val}`);
+      } else {
+        showToast('Item already in library.');
+      }
+    }
+
+    function removeMasterItem(index) {
+      masterItems.splice(index, 1);
+      saveMasterItems();
+      renderMasterCatalogList();
+    }
+
+    function resetMasterCatalogToDefaults() {
+      masterItems = [...DEFAULT_MASTER_ITEMS];
+      saveMasterItems();
+      renderMasterCatalogList();
+      showToast('Master library restored to 47 items.');
+    }
+
+    function openSettingsModal() {
+      document.getElementById('settings-modal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settings-modal').classList.add('hidden');
+    }
+
+    function saveUserProfile() {
+      const nameInput = document.getElementById('settings-user-name');
+      const phoneInput = document.getElementById('settings-user-phone');
+      if (nameInput) state.userInfo.name = nameInput.value.trim() || 'P. C. Prusty';
+      if (phoneInput) state.userInfo.phone = phoneInput.value.trim() || '7008715160';
+      saveState();
+      closeSettingsModal();
+      showToast('Profile updated!');
+    }
+
+    function showToast(msg) {
+      const wrapper = document.getElementById('toast-wrapper');
+      if (!wrapper) return;
+
+      const toast = document.createElement('div');
+      toast.className = 'bg-slate-900/95 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-2xl border border-slate-700 pointer-events-none flex items-center gap-2 max-w-xs text-center transition-all duration-300 transform translate-y-2 opacity-0';
+      toast.innerHTML = `<i class="fa-solid fa-circle-check text-teal-400"></i> ${escapeHtml(msg)}`;
+      wrapper.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 400);
+      }, 2500);
+    }
+
+    function escapeHtml(string) {
+      if (!string) return '';
+      const div = document.createElement('div');
+      div.innerText = string;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
